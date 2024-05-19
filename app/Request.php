@@ -17,11 +17,19 @@ class Request
         $this->parseGetParameters();
     }
 
+    /**
+     * Parses the page number from query parameters and updates it.
+     * @return void This method returns nothing.
+     **/
     private function parsePage(): void {
         $page = $_GET['page'] ?? 1;
         $this->page = max(1, filter_var($page, FILTER_VALIDATE_INT) ?: 1);
     }
 
+    /**
+     * Parses POST data and stores it in the data object.
+     * @return void This method returns nothing.
+     **/
     private function parsePostData(): void {
         if (!empty($_POST)) {
             $this->data = new stdClass();
@@ -31,6 +39,12 @@ class Request
         }
     }
 
+    /**
+     * Parses a data key and its value, then stores them in the data object.
+     * @param string $key The data key to analyze.
+     * @param mixed $value The value associated with the key.
+     * @return void This method returns nothing.
+     **/
     private function parseDataKey(string $key, mixed $value): void {
         if (str_contains($key, '--')) {
             $keys = explode('--', $key);
@@ -40,6 +54,12 @@ class Request
         }
     }
 
+    /**
+     * Parses nested data and stores it in the data object.
+     * @param array $keys An array containing the keys for the nested data.
+     * @param mixed $value The value to store for nested data.
+     * @return void This method returns nothing.
+     **/
     private function parseNestedData(array $keys, mixed $value): void {
         $current = &$this->data;
         foreach ($keys as $index => $key) {
@@ -54,6 +74,10 @@ class Request
         }
     }
 
+    /**
+     * Parses GET request parameters and stores them in the parameters object, excluding the 'page' key.
+     * @return void This method returns nothing.
+     **/
     private function parseGetParameters(): void {
         $this->parameters = new stdClass();
         foreach ($_GET as $key => $value) {
@@ -63,6 +87,12 @@ class Request
         }
     }
 
+    /**
+     * Reloads the data into the object, merging the provided data with the existing data.
+     * @param stdClass|null $data The data to be reloaded may be null.
+     * @param string $parent The prefix for nested data keys.
+     * @return void This method returns nothing.
+     */
     public function reloadData(stdClass|null $data, string $parent = ''): void {
         if (!empty($data)) {
             foreach ($data as $key => $value) {
@@ -75,6 +105,13 @@ class Request
         }
     }
     
+    /**
+     * Updates the object's data with the provided key and value, under an optional parent key.
+     * @param string $key The data key to update.
+     * @param mixed $value The value to assign to the data key.
+     * @param string $parent The optional prefix for the data's parent key.
+     * @return void This method returns nothing.
+     **/
     private function updateData(string $key, $value, string $parent): void {
         $fullKey = $parent ? $parent . $key : $key;
         if (!isset($this->data->$fullKey)) {
