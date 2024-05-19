@@ -1,0 +1,4 @@
+SetEnv PHP_VER 8_2
+SetEnv REGISTER_GLOBALS 0
+RewriteEngine On 
+RewriteRule (.*) public/$1 [L] 
