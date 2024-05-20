@@ -1,7 +1,16 @@
 <?php
+namespace App;
+use DateTime;
+use DOMDocument;
+use DOMXPath;
+use stdClass;
+use App\Inc\Form;
+use App\Inc\Pagination;
+use App\Inc\Session;
+use Config\Conf;
+
 class Controller
 {
-    // Propriétés de la classe
     public ?Request $request;
     private array $vars = [];
     private array $repositories = [];
@@ -9,7 +18,6 @@ class Controller
     public string $url_prefix = '';
     private bool $rendered = false;
     public ?DateTime $datetime = null;
-    //public ?User $user = null;
     public string $table = '';
 
     public Session $Session;
@@ -46,9 +54,6 @@ class Controller
             $view = SRC . DS . 'view' . $view . '.php';
         else
             $view = SRC . DS . 'view' . DS . $this->request->controller . DS . $view . '.php';
-
-        //if ($this->request->action === 'view')
-        //    $this->incrementViewsCounter();
 
         ob_start();
         require $view;
@@ -118,18 +123,19 @@ class Controller
      **/
     public function loadRepository(string $name): void
     {
-        $file = SRC . DS . 'Repository' . DS . $name . '.php';
-        require_once $file;
-
-        if (!isset($this->$name))
-        {
-            $this->$name = new $name();
-
-            if (isset($this->Form))
-                $this->$name->Form = $this->Form;
-
-            if (!in_array(strtolower($name), $this->repositories, true))
-                $this->repositories[] = strtolower($name);
+        $className = "App\\Repository\\" . ucfirst($name) . "Repository";
+        if (!isset($this->$name)) {
+            if (class_exists($className)) {
+                $this->$name = new $className();
+                if (isset($this->Form)) {
+                    $this->$name->Form = $this->Form;
+                }
+                if (!in_array(strtolower($name), $this->repositories, true)) {
+                    $this->repositories[] = strtolower($name);
+                }
+            } else {
+                throw new \Exception("Repository class '$className' not found.");
+            }
         }
     }
 
@@ -177,59 +183,6 @@ class Controller
     }
 
     /**
-     * Retrieves additional fields for a given entity and adds them to the entity.
-     * @param object $entity The entity to add the additional fields to.
-     * @param string|null $class_name (optional) The name of the class, used to filter additional fields.
-     *                                IIf not specified, the lowercase controller name will be used.
-     * @return void This method returns nothing.
-     **/
-    public function getExtraFields(object $entity, ?string $class_name = null): void
-    {
-        if ($class_name === null)
-            $class_name = strtolower($this->request->controller);
-
-        $this->loadRepository('Extra');
-        $extras = $this->Extra->find([
-            'fields' => 'field_key, field_value',
-            'conditions' => [
-                'class_name' => $class_name,
-                'class_row_id' => $entity->id,
-            ],
-        ]);
-
-        if (!empty($extras)) {
-            foreach ($extras as $extra) {
-                $entity->{$extra->field_key} = $extra->field_value;
-            }
-        }
-    }
-
-    /**
-     * Converts an array of additional fields to a formatted string.
-     * @param array|string|null $fields Additional fields to format.
-     *                                  Can be an associative array or an already formatted string.
-     * @return string|null The formatted string of additional fields or null if the fields are empty.
-     **/
-    public function setExtra(array|string|null $fields): ?string
-    {
-        if (isset($fields) && !empty($fields)) {
-            $extra = '';
-            if (is_array($fields)) {
-                foreach ($fields as $key => $value) {
-                    if (!empty($extra) && !empty($value))
-                        $extra .= '|';
-                    if (!empty($value))
-                        $extra .= $key . ':=' . $value;
-                }
-            } else {
-                $extra = $fields;
-            }
-            return $extra;
-        }
-        return null;
-    }
-
-    /**
      * Converts a name to a unique and valid code for a given table.
      * @param string $name The name to convert to code.
      * @param string|null $table (optional) The name of the table to use for the conversion. By default, uses the current table of the instance.
@@ -237,13 +190,19 @@ class Controller
      **/
     public function name2code(string $name, ?string $table = null): string
     {
-        if (!$table) $table = $this->table;
-        
-        $this->loadRepository(ucfirst($table));
-        
+        if (!$table) {
+            $table = $this->table;
+        }
+        $table = ucfirst($table);
+
+        $this->loadRepository($table);
+
+        $repositoryName = $table . 'Repository';
+        $repository = $this->$table;
+
         $code = str_replace('$amp;', '&', addslashes(substr(strtolower(preg_replace('/[^a-zA-Z0-9_.]/', '-', htmlspecialchars($name))), 0, 100)));
 
-        $occ = $this->{ucfirst($table)}->findFirst([
+        $occ = $repository->findFirst([
             'conditions' => ['code' => $code]
         ]);
 
@@ -255,7 +214,7 @@ class Controller
             while (!empty($occ)) {
                 $i++;
                 $slash = $code . "-" . $i;
-                $occ = $this->{ucfirst($table)}->findFirst([
+                $occ = $repository->findFirst([
                     'conditions' => ['code' => $slash]
                 ]);
             }
@@ -278,11 +237,18 @@ class Controller
     }
 
 	/**
-     * Méthode pour initialiser les propriétés et les paramètres de la classe
+     * Method to initialize class properties and parameters
      **/
     public function initialize(): void
     {
-        $this->table = strtolower(str_replace('Controller', '', get_class($this)));
+        $this->table = strtolower(str_replace('Controller', '', basename(str_replace('\\', '/', get_class($this)))));
+        
+
+        //autoloader($this->table);
+        //$this->loadAllRepositories();
+        //debug($this->table);
+        //require_once SRC . DS . 'Repository' . DS . ucfirst($this->table) . 'Repository.php';
+
         $this->datetime = new DateTime();
         
         $parametersXml = simplexml_load_file(ROOT . DS . 'config' . DS . 'parameters.xml');
@@ -295,6 +261,28 @@ class Controller
         }
     }
 
+    /**
+     * Loads all repository files into the repositories directory.
+     * @return void This method returns nothing.
+     **/
+    public function loadAllRepositories(){
+        $cdir = scandir(SRC . DS . 'Repository');
+        foreach ($cdir as $key => $value){
+            if (!in_array($value,[".",".."])){
+                $file = SRC . DS . 'Repository' . DS . $value;
+                debug($file);
+                if (file_exists($file)) {
+                    require_once $file;
+                }
+            }
+        }
+    }
+
+    /**
+     * Constructs a stdClass object from an array of arguments.
+     * @param array $arguments The argument array to convert to a stdClass object.
+     * @return stdClass The stdClass object constructed from the argument array.
+     **/
 	public function buildParameters(array $arguments): stdClass
 	{
 		$out = new stdClass;
@@ -329,10 +317,17 @@ class Controller
 		return $out;
 	}
 
+    /**
+     * Modifies the value of a parameter.
+     * @param string $entity The entity name in the file.
+     * @param string $node The path of the parameter node to modify.
+     * @param string $value The new parameter value.
+     * @return void This method returns nothing.
+     **/
 	public function changeParameter(string $entity, string $node, string $value): void
 	{
 		$dom = new DOMDocument();
-		$dom->load(ROOT . DS . 'conf' . DS . 'parameters.xml');
+		$dom->load(ROOT . DS . 'config' . DS . 'parameters.xml');
 		$dom->formatOutput = true;
 
 		$xpath = new DOMXPath($dom);
@@ -352,7 +347,7 @@ class Controller
 			$targetNode->appendChild($dom->createTextNode($value));
 		}
 
-		$dom->save(ROOT . DS . 'conf' . DS . 'parameters.xml');
+		$dom->save(ROOT . DS . 'config' . DS . 'parameters.xml');
 	}
 
 }
