@@ -1,4 +1,8 @@
 <?php
+namespace App;
+
+use stdClass;
+
 class Request
 {
     public string $url;
