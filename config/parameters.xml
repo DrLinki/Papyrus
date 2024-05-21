@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parameters>
+	<settings>
+		<sitecode>Papyrus</sitecode>
+		<type>net</type>
+		<language>fr_FR</language>
+		<dateformat>
+			<date>d/m/Y</date>
+			<time>H:i</time>
+		</dateformat>
+		<htmlheader>
+			<desc/>
+			<title/>
+			<resume/>
+			<url/>
+		</htmlheader>
+	</settings>
+	<processes/>
+	<entities/>
+</parameters>
