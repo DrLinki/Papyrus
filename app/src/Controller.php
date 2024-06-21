@@ -19,10 +19,10 @@ class Controller
     private bool $rendered = false;
     public ?DateTime $datetime = null;
     public string $table = '';
-
     public Session $Session;
     public Pagination $Pagination;
     public Form $Form;
+    public Conf $Conf;
 
     /**
      * Constructeur
@@ -33,6 +33,7 @@ class Controller
         $this->Session = new Session();
         $this->Pagination = new Pagination($this);
         $this->Form = new Form($this);
+        $this->Conf = new Conf();
 
         if ($request) {
             $this->request = $request;
@@ -242,23 +243,7 @@ class Controller
     public function initialize(): void
     {
         $this->table = strtolower(str_replace('Controller', '', basename(str_replace('\\', '/', get_class($this)))));
-        
-
-        //autoloader($this->table);
-        //$this->loadAllRepositories();
-        //debug($this->table);
-        //require_once SRC . DS . 'Repository' . DS . ucfirst($this->table) . 'Repository.php';
-
         $this->datetime = new DateTime();
-        
-        $parametersXml = simplexml_load_file(ROOT . DS . 'config' . DS . 'parameters.xml');
-        $parameters = json_decode(json_encode($parametersXml), true);
-        $parameters = $this->buildParameters($parameters);
-
-        foreach ($parameters as $key => $value) {
-            if(isset(Conf::${$key}))
-                Conf::${$key} = $value;
-        }
     }
 
     /**

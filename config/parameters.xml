@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parameters>
 	<settings>
+		<version>0.0.1</version>
 		<sitecode>Papyrus</sitecode>
 		<type>net</type>
 		<language>fr_FR</language>
