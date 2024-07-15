@@ -3,6 +3,7 @@
     <head>
         <meta charset="charset=utf-8" />
 		<title><?php echo $title_for_layout ?? $this->Conf::$settings->htmlheader->resume ?? ''; ?></title>
+		<link rel="stylesheet" media="screen" type="text/css" title="Style" href="<?php echo Router::webroot("assets/style/base.css"); ?>" />
 	</head>
 	<body id="<?php echo $this->request->controller.'_'.$this->request->action; ?>" class="<?php echo $this->layout.'_layout'; ?>">
 		<div id="container" class="<?php echo $this->request->controller.'_page'; ?>">
